@@ -4,12 +4,42 @@
 python3.5.4-amd64,\n
 opencv_python-3.4.0-cp35-win_amd64,\n
 gdal-2.2.4-cp35-win-amd64\n
+
+@author 王墨白
+@date 2018-04-15 
+@brief 遥感栅格图像计算库
 """
 
 from osgeo import gdal_array as ga
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageEnhance
 import cv2
+
+def loadBand(fileName):
+    """
+    读取波段图像，并进行灰度处理为单通道图像\n
+    参数：\n
+    fileName - (str)文件名 包含路径\n
+    返回值：\n
+    (ndarray)灰度图像数组
+    """
+    band = cv2.imread(fileName)
+    if(len(band.shape)==3):
+        band = cv2.cvtColor(band, cv2.COLOR_BGR2GRAY)
+    # band = cv2.resize(band, (800,800))
+    return band
+
+def saveGTiff(ndarray, fileName):
+    """
+    ndarray保存为GTiff格式图片\n
+    参数：\n
+    ndarray - (ndarray)图片\n
+    fileName - (str)文件名\n
+    返回值：\n
+    None
+    """
+    ga.SaveArray(ndarray, fileName, format="GTiff")
+    return
 
 def fixAnomoly(ndarray):
     """
@@ -36,20 +66,31 @@ def stretchEnhance(ndarray):
     """
     return ((1.0+ndarray)*0.5)*255.0
 
+def PILEnhance(ndarray, color, contrast):
+    """
+    使用PIL库进行图像色度和对比度增强\n
+    参数:\n
+    ndarray - 数组形式图像\n
+    color - (int)色度增强指数\n
+    contrast - (int)对比度增强\n
+    返回值：\n
+    (ndarray)图片数组
+    """
+    PILImage = Image.fromarray(ndarray)
+
+    enh_col = ImageEnhance.Color(PILImage)  
+    image_colored = enh_col.enhance(color)
+    enh_con = ImageEnhance.Contrast(image_colored)  
+    image_contrasted = enh_con.enhance(contrast)  
+    
+    outndarray = np.array(image_contrasted)
+    return outndarray
+
+
 def float64ToInt(ndarray):
     return ndarray.astype(int)
 
-def saveGTiff(ndarray, fileName):
-    """
-    ndarray保存为GTiff格式图片\n
-    参数：\n
-    ndarray - (ndarray)图片\n
-    fileName - (str)文件名\n
-    返回值：\n
-    None
-    """
-    ga.SaveArray(ndarray, fileName, format="GTiff")
-    return
+
 
 def binaryPixels(ndarray, color):
     """
@@ -63,10 +104,10 @@ def binaryPixels(ndarray, color):
     pixelToArea() 将像素转换为面积
     """
     area = 0
-    height, width = np.shape(ndarray)
+    info = ndarray.shape
     # print(height, width)
-    for i in range(height):
-        for j in range(width):
+    for i in range(info[0]):
+        for j in range(info[1]):
             if (ndarray[i, j] == int(color)):
                 area += 1
     return area
@@ -82,10 +123,8 @@ def imgToBinary(img, threshold):
     下一步可用：\n
     binaryPixels() 计算二值化目标像素点个数
     """
-    try:
+    if(len(img.shape)==3):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-    except:
-        print("-----------Already a gray image-----------")
     ret, bi = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY)
     return bi
 

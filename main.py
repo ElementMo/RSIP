@@ -6,22 +6,13 @@ import cv2
 
 ###################    读取TIF文件，并转换为灰度图   ####################
 
-mask = cv2.imread("Assets/Mask.tif")
-maskArea = rc.pixelToArea(rc.binaryPixels(rc.imgToBinary(mask, 100), 255)) #遮罩区域面积
-maskedOutArea = rc.pixelToArea(rc.binaryPixels(rc.imgToBinary(mask, 100), 0))  #遮罩外部面积
 
-blue = cv2.imread("Assets/SHP2Raster2.tif")  # Band2
-blue = cv2.cvtColor(blue, cv2.COLOR_BGR2GRAY)
-green = cv2.imread("Assets/SHP2Raster3.tif")  # Band3
-green = cv2.cvtColor(green, cv2.COLOR_BGR2GRAY)
-red = cv2.imread("Assets/SHP2Raster4.tif")  # Band4
-red = cv2.cvtColor(red, cv2.COLOR_BGR2GRAY)
-nir = cv2.imread("Assets/SHP2Raster5.tif")  # Band5
-nir = cv2.cvtColor(nir, cv2.COLOR_BGR2GRAY)
-swir1 = cv2.imread("Assets/SHP2Raster6.tif")  # Band6
-swir1 = cv2.cvtColor(swir1, cv2.COLOR_BGR2GRAY)
-swir2 = cv2.imread("Assets/SHP2Raster7.tif")  # Band7
-swir2 = cv2.cvtColor(swir2, cv2.COLOR_BGR2GRAY)
+blue = rc.loadBand("Assets/SHP2Raster2.tif")  # Band2
+green = rc.loadBand("Assets/kfb3.tif")  # Band3
+red = rc.loadBand("Assets/kfb4.tif")  # Band4
+nir = rc.loadBand("Assets/kfb5.tif")  # Band5
+swir1 = rc.loadBand("Assets/kfb6.tif")  # Band6
+swir2 = rc.loadBand("Assets/SHP2Raster7.tif")  # Band7
 
 
 ga.numpy.seterr(all="ignore")
@@ -39,10 +30,24 @@ ndwi = rc.stretchEnhance(ndwi)
 
 
 # intndvi = np.around(ndvi, decimals=0)
-intndvi = ndvi.astype(int)
-intndbi = ndbi.astype(int)
-intndwi = ndwi.astype(int)
 
-cv2.imwrite("img/NDVI.TIF", intndvi)
-cv2.imwrite("img/NDBI.TIF", intndbi)
-cv2.imwrite("img/NDWI.TIF", intndwi)
+# ndvi = ndvi.astype(int)
+# ndbi = ndbi.astype(int)
+# ndwi = ndwi.astype(int)
+
+cv2.imwrite("img/NDVI.TIF", ndvi)
+cv2.imwrite("img/NDBI.TIF", ndbi)
+cv2.imwrite("img/NDWI.TIF", ndwi)
+
+mask = cv2.imread("Assets/kfb3.tif")
+maskArea = rc.pixelToArea(rc.binaryPixels(rc.imgToBinary(mask, 1), 255))
+print("KaiFeng Area: "+str(maskArea/1000000)+" km^2")
+maskedOutArea = rc.pixelToArea(rc.binaryPixels(rc.imgToBinary(mask, 1), 0))
+
+
+NDBIArea = rc.pixelToArea(rc.binaryPixels(rc.imgToBinary(ndbi, 200), 0)) - maskedOutArea
+print("Building Area: "+str(NDBIArea/1000000)+" km^2")
+
+NDWIArea = rc.pixelToArea(rc.binaryPixels(rc.imgToBinary(ndwi, 200), 0)) - maskedOutArea
+print("Water Area: "+str(NDWIArea/1000000)+" km^2")
+
