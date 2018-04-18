@@ -2,7 +2,7 @@
 """ 
 @author 王墨白
 @date 2018-04-14 
-@brief 利用shp文件裁剪影像 
+@brief SHP-栅格影像裁剪
 """  
   
 from osgeo import gdal, gdalnumeric, ogr, gdal_array
@@ -16,14 +16,17 @@ gdal.UseExceptions()
 
 # This function will convert the rasterized clipper shapefile  
 # to a mask for use within GDAL.
-def imageToArray(i):
+def imageToArray(img):
     """ 
-    Converts a Python Imaging Library array to a 
-    gdalnumeric image.
+    将 PIL.Image 转换为 gdalnumeric array 格式\n
+    参数：\n
+    img - (PIL.Image)输入图片\n
+    返回值：\n
+    
     """  
-    a = gdalnumeric.fromstring(i.tobytes(),'b')
-    a.shape = i.im.size[1], i.im.size[0]
-    return a
+    array = gdalnumeric.fromstring(img.tobytes(),'b')
+    array.shape = img.im.size[1], img.im.size[0]
+    return array
   
 def arrayToImage(a):
     """ 
@@ -90,82 +93,61 @@ def stretch(a):
         im = im.point(lut)
     return imageToArray(im)
   
-def main( shapefile_path, raster_path ):
-    # Load the source data as a gdalnumeric array  
+def main( shapefile_path, raster_path, fileName):
+    # 读取栅格影像路径
     srcArray = gdalnumeric.LoadFile(raster_path)
-
-    # Also load as a gdal image to get geotransform
-    # (world file) info  
+    # 读取栅格据
     srcImage = gdal.Open(raster_path)
     geoTrans = srcImage.GetGeoTransform()
-  
-    # Create an OGR layer from a boundary shapefile  
+    # 读取矢量图形数据路径
     shapef = ogr.Open(shapefile_path)
     lyr = shapef.GetLayer( os.path.split( os.path.splitext( shapefile_path )[0])[1])
     poly = lyr.GetNextFeature()
-
-    # Convert the layer extent to image pixel coordinates  
+    # 矢量图形坐标换算
     minX, maxX, minY, maxY = lyr.GetExtent()
     ulX, ulY = world2Pixel(geoTrans, minX, maxY)
     lrX, lrY = world2Pixel(geoTrans, maxX, minY)
-
-    # Calculate the pixel size of the new image  
+    # 计算新生成图像大小
     pxWidth = int(lrX - ulX)
     pxHeight = int(lrY - ulY)
-
     clip = srcArray[:, ulY:lrY, ulX:lrX]
-    #  
-    # EDIT: create pixel offset to pass to new image Projection info  
-    #  
     xoffset = ulX
     yoffset = ulY
     print("Xoffset, Yoffset = ( %f, %f )" % (xoffset, yoffset))
-  
-    # Create a new geomatrix for the image  
+    # 创建geomatrix
     geoTrans = list(geoTrans)
     geoTrans[0] = minX
     geoTrans[3] = maxY
-
-    # Map points to pixels for drawing the  
-    # boundary on a blank 8-bit,  
-    # black and white, mask image.  
+    # 创建一张黑白遮罩图像，将矢量点集映射到像素上
     points = []
     pixels = []
     geom = poly.GetGeometryRef()
     pts = geom.GetGeometryRef(0)
-
     for p in range(pts.GetPointCount()):
       points.append((pts.GetX(p), pts.GetY(p)))
     for p in points:
       pixels.append(world2Pixel(geoTrans, p[0], p[1]))
-
     rasterPoly = Image.new("L", (pxWidth, pxHeight), 1)
     rasterize = ImageDraw.Draw(rasterPoly)
     rasterize.polygon(pixels, 0)
     mask = imageToArray(rasterPoly)
-  
-    # Clip the image using the mask  
+    # 裁剪遮罩
     clip = gdalnumeric.choose(mask, (clip, 0)).astype(gdalnumeric.int16)
     clip = clip.astype(gdalnumeric.int16)
-
-    # This image has 3 bands so we stretch each one to make them  
-    # visually brighter  
-    """
-    for i in range(3):
-      clip[i,:,:] = stretch(clip[i,:,:])
-    """
-
+    #加载GTiff驱动，存储结果为tiff图像
     gtiffDriver = gdal.GetDriverByName('GTiff')
     if gtiffDriver is None:
         raise ValueError("Can't load GeoTiff Driver")
     print(type(clip))
-    
-    gdalnumeric.SaveArray(clip, "kfb4.tif", format="GTiff")
-  
+    gdalnumeric.SaveArray(clip, fileName, format="GTiff")
+    print("裁剪完毕")
     gdal.ErrorReset()
   
   
 if __name__ == '__main__':  
     shapefile_path = r'Assets/kaifeng.shp'
-    raster_path = r'Assets/B4.tif'
-    main(shapefile_path, raster_path)  
+    # raster_path = r'Assets/B4.tif'
+    main(shapefile_path, r'Assets/B3.tif', "Assets/kfb3.tif")
+    main(shapefile_path, r'Assets/B4.tif', "Assets/kfb4.tif")
+    main(shapefile_path, r'Assets/B5.tif', "Assets/kfb5.tif")
+    main(shapefile_path, r'Assets/B6.tif', "Assets/kfb6.tif")

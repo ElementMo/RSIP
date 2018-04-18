@@ -72,7 +72,7 @@ def PILEnhance(ndarray, color, contrast):
     参数:\n
     ndarray - 数组形式图像\n
     color - (int)色度增强指数\n
-    contrast - (int)对比度增强\n
+    contrast - (int)对比度增强指数\n
     返回值：\n
     (ndarray)图片数组
     """
