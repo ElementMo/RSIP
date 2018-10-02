@@ -6,4 +6,4 @@ LandSat8 BandMerge(GIS info reserved);
 Building Area Extraction;  
 Water Area Extraction;  
 ## 遥感处理工具
-提取LandSat8原始影像中的行政区画面以及对应的NDVI NDWI数据
+提取LandSat8原始影像中的行政区影像以及对应的NDVI NDWI数据
